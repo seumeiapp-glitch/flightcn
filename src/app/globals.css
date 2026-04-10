@@ -40,6 +40,15 @@
   --color-telemetry-live-pulse: var(--telemetry-live-pulse);
   --color-telemetry-trend-up: var(--telemetry-trend-up);
   --color-telemetry-trend-down: var(--telemetry-trend-down);
+  --color-telemetry-heatmap-low: var(--telemetry-heatmap-low);
+  --color-telemetry-heatmap-medium: var(--telemetry-heatmap-medium);
+  --color-telemetry-heatmap-high: var(--telemetry-heatmap-high);
+  --color-telemetry-heatmap-extreme: var(--telemetry-heatmap-extreme);
+  --color-telemetry-point-default: var(--telemetry-point-default);
+  --color-telemetry-point-selected: var(--telemetry-point-selected);
+  --color-telemetry-point-critical: var(--telemetry-point-critical);
+  --color-telemetry-point-recent: var(--telemetry-point-recent);
+  --color-telemetry-point-stroke: var(--telemetry-point-stroke);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -128,6 +137,17 @@
   --telemetry-live-pulse: oklch(0.65 0.18 145);
   --telemetry-trend-up: oklch(0.65 0.18 145);
   --telemetry-trend-down: oklch(0.6 0.22 25);
+  /* Heatmap colors - neutral scale for activity density */
+  --telemetry-heatmap-low: oklch(0.65 0.15 250 / 40%);
+  --telemetry-heatmap-medium: oklch(0.7 0.16 145 / 60%);
+  --telemetry-heatmap-high: oklch(0.75 0.18 80 / 75%);
+  --telemetry-heatmap-extreme: oklch(0.6 0.22 25 / 90%);
+  /* Point states */
+  --telemetry-point-default: oklch(0.65 0.2 250);
+  --telemetry-point-selected: oklch(0.7 0.22 145);
+  --telemetry-point-critical: oklch(0.6 0.22 25);
+  --telemetry-point-recent: oklch(0.65 0.18 145);
+  --telemetry-point-stroke: oklch(1 0 0);
 }
 
 .dark {
@@ -186,6 +206,17 @@
   --telemetry-live-pulse: oklch(0.7 0.16 145);
   --telemetry-trend-up: oklch(0.7 0.16 145);
   --telemetry-trend-down: oklch(0.65 0.2 25);
+  /* Heatmap colors - dark mode */
+  --telemetry-heatmap-low: oklch(0.7 0.15 250 / 35%);
+  --telemetry-heatmap-medium: oklch(0.75 0.14 145 / 55%);
+  --telemetry-heatmap-high: oklch(0.78 0.16 80 / 70%);
+  --telemetry-heatmap-extreme: oklch(0.65 0.2 25 / 85%);
+  /* Point states - dark mode */
+  --telemetry-point-default: oklch(0.7 0.18 250);
+  --telemetry-point-selected: oklch(0.75 0.2 145);
+  --telemetry-point-critical: oklch(0.65 0.2 25);
+  --telemetry-point-recent: oklch(0.7 0.16 145);
+  --telemetry-point-stroke: oklch(0.22 0 0);
 }
 
 @layer base {
@@ -240,5 +271,35 @@
 
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: rgb(15 23 42 / 0.82);
+  }
+
+  /* Telemetry pulse animation for recent events */
+  @keyframes telemetry-pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.85;
+    }
+  }
+
+  .telemetry-pulse {
+    animation: telemetry-pulse 2s ease-in-out infinite;
+  }
+
+  /* Telemetry live indicator */
+  @keyframes telemetry-live {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .telemetry-live-indicator {
+    animation: telemetry-live 1.5s ease-in-out infinite;
   }
 }

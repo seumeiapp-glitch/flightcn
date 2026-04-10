@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type MapLibreGL from "maplibre-gl";
-import { Globe, Map as MapIcon } from "lucide-react";
+import { Globe, Map as MapIcon, Layers } from "lucide-react";
 
 import {
   Map,
   MapControls,
   MapClusterLayer,
+  MapHeatmapLayer,
   MapPopup,
 } from "@/components/ui/map";
 import type {
@@ -59,11 +60,13 @@ const defaultFilters: TelemetryFilters = {
 };
 
 type MapProjection = "globe" | "mercator";
+type VisualizationMode = "points" | "heatmap" | "both";
 
 export function TelemetryGeoPage() {
   const mapRef = useRef<MapLibreGL.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapProjection, setMapProjection] = useState<MapProjection>("globe");
+  const [vizMode, setVizMode] = useState<VisualizationMode>("both");
   const [events, setEvents] = useState<TelemetryEvent[]>(mockEvents);
   const [selectedEvent, setSelectedEvent] = useState<TelemetryEvent | null>(null);
   const [filters, setFilters] = useState<TelemetryFilters>(defaultFilters);
@@ -276,6 +279,15 @@ export function TelemetryGeoPage() {
     setMapProjection((prev) => (prev === "globe" ? "mercator" : "globe"));
   }, []);
 
+  // Cycle visualization mode (points -> heatmap -> both)
+  const handleToggleVizMode = useCallback(() => {
+    setVizMode((prev) => {
+      if (prev === "both") return "points";
+      if (prev === "points") return "heatmap";
+      return "both";
+    });
+  }, []);
+
   // All rankings organized by type
   const allRankings = useMemo(() => ({
     countries: mockCountryRankings,
@@ -330,20 +342,33 @@ export function TelemetryGeoPage() {
             zoom={1.5}
             projection={{ type: mapProjection }}
           >
-              {/* Event clusters */}
-            <MapClusterLayer
-              data={geoJsonData}
-              clusterRadius={60}
-              clusterMaxZoom={12}
-              clusterColors={[
-                "var(--telemetry-cluster-small)",
-                "var(--telemetry-cluster-medium)",
-                "var(--telemetry-cluster-large)",
-              ]}
-              clusterThresholds={[10, 50]}
-              pointColor="var(--telemetry-marker-primary)"
-              onPointClick={handlePointClick}
-            />
+            {/* Heatmap layer - renders below points for density visualization */}
+            {(vizMode === "heatmap" || vizMode === "both") && (
+              <MapHeatmapLayer
+                data={geoJsonData}
+                radius={25}
+                intensity={0.8}
+                opacity={vizMode === "both" ? 0.4 : 0.65}
+                maxZoom={12}
+              />
+            )}
+
+            {/* Event clusters/points */}
+            {(vizMode === "points" || vizMode === "both") && (
+              <MapClusterLayer
+                data={geoJsonData}
+                clusterRadius={60}
+                clusterMaxZoom={12}
+                clusterColors={[
+                  "var(--telemetry-cluster-small)",
+                  "var(--telemetry-cluster-medium)",
+                  "var(--telemetry-cluster-large)",
+                ]}
+                clusterThresholds={[10, 50]}
+                pointColor="var(--telemetry-point-default)"
+                onPointClick={handlePointClick}
+              />
+            )}
 
             {/* Selected event popup */}
             {selectedEvent && (
@@ -415,8 +440,26 @@ export function TelemetryGeoPage() {
             </div>
           )}
 
-          {/* Projection toggle button (Globe <-> Flat) */}
-          <div className="absolute bottom-24 right-3 z-10">
+          {/* Map visualization controls */}
+          <div className="absolute bottom-24 right-3 z-10 flex flex-col gap-2">
+            {/* Visualization mode toggle */}
+            <button
+              type="button"
+              onClick={handleToggleVizMode}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-telemetry-panel-border bg-telemetry-panel shadow-md transition-colors hover:bg-telemetry-feed-item-hover"
+              title={
+                vizMode === "both" ? "Mostrar apenas pontos" :
+                vizMode === "points" ? "Mostrar apenas heatmap" :
+                "Mostrar pontos + heatmap"
+              }
+            >
+              <Layers className={cn(
+                "h-5 w-5",
+                vizMode === "both" ? "text-primary" : "text-muted-foreground"
+              )} />
+            </button>
+
+            {/* Projection toggle button (Globe <-> Flat) */}
             <button
               type="button"
               onClick={handleToggleProjection}
@@ -431,33 +474,57 @@ export function TelemetryGeoPage() {
             </button>
           </div>
 
-          {/* Active filters indicator on map */}
-          {mapReady && (filters.eventTypes.length > 0 ||
-            filters.country ||
-            filters.criticalOnly ||
-            activeRankingFilter) && (
-            <div className="absolute left-4 top-4 rounded-lg border border-telemetry-panel-border bg-telemetry-panel/95 px-3 py-2 text-xs backdrop-blur-sm">
-              <span className="font-medium">Filtros ativos: </span>
-              {filters.eventTypes.length > 0 && (
-                <span className="text-muted-foreground">
-                  {filters.eventTypes.length} tipo(s)
-                </span>
-              )}
-              {filters.country && (
-                <span className="ml-2 text-muted-foreground">
-                  Pais: {filters.country}
-                </span>
-              )}
-              {activeRankingFilter && (
-                <span className="ml-2 text-primary">
-                  {activeRankingFilter.name}
-                </span>
-              )}
-              {filters.criticalOnly && (
-                <span className="ml-2 text-telemetry-marker-danger">Apenas criticos</span>
-              )}
+          {/* Map legend and indicators */}
+          <div className="absolute left-4 top-4 flex flex-col gap-2">
+            {/* Visualization mode indicator */}
+            <div className="rounded-lg border border-telemetry-panel-border bg-telemetry-panel/95 px-3 py-2 text-xs backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <span className="font-medium text-muted-foreground">Visualizacao:</span>
+                <div className="flex items-center gap-2">
+                  {(vizMode === "points" || vizMode === "both") && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-telemetry-point-default" />
+                      <span>Pontos</span>
+                    </span>
+                  )}
+                  {(vizMode === "heatmap" || vizMode === "both") && (
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2 w-4 rounded bg-gradient-to-r from-telemetry-heatmap-low via-telemetry-heatmap-medium to-telemetry-heatmap-high" />
+                      <span>Densidade</span>
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-          )}
+
+            {/* Active filters indicator */}
+            {mapReady && (filters.eventTypes.length > 0 ||
+              filters.country ||
+              filters.criticalOnly ||
+              activeRankingFilter) && (
+              <div className="rounded-lg border border-telemetry-panel-border bg-telemetry-panel/95 px-3 py-2 text-xs backdrop-blur-sm">
+                <span className="font-medium">Filtros: </span>
+                {filters.eventTypes.length > 0 && (
+                  <span className="text-muted-foreground">
+                    {filters.eventTypes.length} tipo(s)
+                  </span>
+                )}
+                {filters.country && (
+                  <span className="ml-2 text-muted-foreground">
+                    {filters.country}
+                  </span>
+                )}
+                {activeRankingFilter && (
+                  <span className="ml-2 text-primary">
+                    {activeRankingFilter.name}
+                  </span>
+                )}
+                {filters.criticalOnly && (
+                  <span className="ml-2 text-telemetry-marker-danger">Criticos</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Sidebar - always visible and interactive */}

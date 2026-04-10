@@ -1515,6 +1515,145 @@ function MapClusterLayer<
   return null;
 }
 
+type MapHeatmapLayerProps = {
+  /** GeoJSON FeatureCollection data with Point geometry */
+  data: GeoJSON.FeatureCollection<GeoJSON.Point>;
+  /** Property to use for weight (default uses uniform weight of 1) */
+  weightProperty?: string;
+  /** Heatmap intensity at zoom 0 (default: 1) */
+  intensity?: number;
+  /** Heatmap radius in pixels at zoom 0 (default: 20) */
+  radius?: number;
+  /** Opacity from 0 to 1 (default: 0.6) */
+  opacity?: number;
+  /** Color gradient from low to high density. Array of [stop, color] pairs (0-1 range) */
+  colorGradient?: Array<[number, string]>;
+  /** Maximum zoom level for heatmap rendering (default: 14) */
+  maxZoom?: number;
+};
+
+/**
+ * Heatmap layer for visualizing density/intensity of point data.
+ * Uses a neutral color scale by default for clarity without filter context.
+ */
+function MapHeatmapLayer({
+  data,
+  weightProperty,
+  intensity = 1,
+  radius = 20,
+  opacity = 0.6,
+  colorGradient,
+  maxZoom = 14,
+}: MapHeatmapLayerProps) {
+  const { map, isLoaded } = useMap();
+  const id = useId();
+  const sourceId = `heatmap-source-${id}`;
+  const layerId = `heatmap-layer-${id}`;
+
+  // Default neutral color gradient (transparent -> blue -> cyan -> green -> yellow)
+  const defaultGradient: Array<[number, string]> = [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(59, 130, 246, 0.4)"],
+    [0.4, "rgba(34, 197, 94, 0.6)"],
+    [0.6, "rgba(250, 204, 21, 0.75)"],
+    [0.8, "rgba(249, 115, 22, 0.85)"],
+    [1, "rgba(239, 68, 68, 0.95)"],
+  ];
+
+  const gradient = colorGradient ?? defaultGradient;
+
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+
+    // Add source
+    map.addSource(sourceId, {
+      type: "geojson",
+      data,
+    });
+
+    // Build heatmap-color expression
+    const colorExpr: (string | number)[] = [
+      "interpolate",
+      ["linear"],
+      ["heatmap-density"],
+    ];
+    for (const [stop, color] of gradient) {
+      colorExpr.push(stop, color);
+    }
+
+    // Add heatmap layer
+    map.addLayer(
+      {
+        id: layerId,
+        type: "heatmap",
+        source: sourceId,
+        maxzoom: maxZoom,
+        paint: {
+          // Increase weight with zoom
+          "heatmap-weight": weightProperty
+            ? ["interpolate", ["linear"], ["get", weightProperty], 0, 0, 10, 1]
+            : 1,
+          // Increase intensity with zoom level
+          "heatmap-intensity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            intensity,
+            maxZoom,
+            intensity * 3,
+          ],
+          // Color ramp for heatmap
+          "heatmap-color": colorExpr as MapLibreGL.ExpressionSpecification,
+          // Radius increases with zoom
+          "heatmap-radius": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            0,
+            radius,
+            maxZoom,
+            radius * 2,
+          ],
+          "heatmap-opacity": [
+            "interpolate",
+            ["linear"],
+            ["zoom"],
+            maxZoom - 1,
+            opacity,
+            maxZoom,
+            0,
+          ],
+        },
+      },
+      // Insert before first symbol layer (labels) to keep labels on top
+      map.getStyle().layers?.find((l) => l.type === "symbol")?.id
+    );
+
+    return () => {
+      try {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      } catch {
+        // ignore
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, map]);
+
+  // Update source data
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+
+    const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource;
+    if (source) {
+      source.setData(data);
+    }
+  }, [isLoaded, map, data, sourceId]);
+
+  return null;
+}
+
 export {
   Map,
   useMap,
@@ -1527,6 +1666,7 @@ export {
   MapControls,
   MapRoute,
   MapClusterLayer,
+  MapHeatmapLayer,
 };
 
 export type { MapRef, MapViewport };
