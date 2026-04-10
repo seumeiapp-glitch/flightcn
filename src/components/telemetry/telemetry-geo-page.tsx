@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type MapLibreGL from "maplibre-gl";
-import { Globe, Map as MapIcon, Layers, Moon, Sun, Download, Activity, Building2 } from "lucide-react";
+import { Globe, Map as MapIcon, Layers, Moon, Sun, Download, Activity, Building2, LayoutGrid, Maximize2, Minimize2, Palette } from "lucide-react";
 import { useTheme } from "next-themes";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -48,6 +48,8 @@ import { TelemetryGeoHeader } from "./telemetry-geo-header";
 import { TelemetryGeoSidebar } from "./telemetry-geo-sidebar";
 import { TelemetryGeoDrilldown } from "./telemetry-geo-drilldown";
 import { TelemetryLoadingState } from "./telemetry-states";
+import { TelemetryNetworkPanel } from "./telemetry-network-panel";
+import { TelemetryDataView } from "./telemetry-data-view";
 import { cn } from "@/lib/utils";
 
 type DrilldownLevel = {
@@ -67,6 +69,7 @@ const defaultFilters: TelemetryFilters = {
 type MapProjection = "globe" | "mercator";
 type VisualizationMode = "points" | "heatmap" | "both";
 type ViewMode = "telemetry" | "network";
+type MapDisplayMode = "full" | "minimal" | "hidden";
 
 // Company color map for heatmap filtering
 const COMPANY_COLORS: Record<string, HeatmapPreset> = {
@@ -91,6 +94,7 @@ export function TelemetryGeoPage() {
   const [mapProjection, setMapProjection] = useState<MapProjection>("globe");
   const [vizMode, setVizMode] = useState<VisualizationMode>("both");
   const [viewMode, setViewMode] = useState<ViewMode>("telemetry");
+  const [mapDisplayMode, setMapDisplayMode] = useState<MapDisplayMode>("full");
   const [heatmapColor, setHeatmapColor] = useState<HeatmapPreset>("neutral");
   const [companyFilter, setCompanyFilter] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -472,37 +476,89 @@ export function TelemetryGeoPage() {
       {/* Header */}
       <TelemetryGeoHeader summary={mockSummary} />
 
-      {/* Network Traffic View (Creative Addition 1) */}
-      {viewMode === "network" && (
-        <div className="border-b border-telemetry-panel-border bg-telemetry-panel px-4 py-3">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
-                <Activity className="h-4 w-4 text-blue-500" />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Bandwidth Total</div>
-                <div className="text-sm font-semibold">{networkStats.totalBandwidth} MB</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
-                <Globe className="h-4 w-4 text-green-500" />
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Latencia Media</div>
-                <div className="text-sm font-semibold">{networkStats.avgLatency} ms</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              {Object.entries(networkStats.byPlatform).map(([platform, count]) => (
-                <div key={platform} className="text-center">
-                  <div className="text-xs text-muted-foreground capitalize">{platform}</div>
-                  <div className="text-sm font-semibold">{count}</div>
-                </div>
-              ))}
+      {/* Map Display Mode Controls */}
+      {viewMode === "telemetry" && (
+        <div className="flex flex-wrap items-center gap-3 border-b border-telemetry-panel-border bg-telemetry-panel px-4 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Visualizacao:</span>
+            <div className="flex items-center gap-1 rounded-lg bg-muted p-0.5">
+              <button
+                type="button"
+                onClick={() => setMapDisplayMode("full")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                  mapDisplayMode === "full"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Maximize2 className="h-3 w-3" />
+                Mapa Completo
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapDisplayMode("minimal")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                  mapDisplayMode === "minimal"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Minimize2 className="h-3 w-3" />
+                Mapa Minimo
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapDisplayMode("hidden")}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                  mapDisplayMode === "hidden"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <LayoutGrid className="h-3 w-3" />
+                Apenas Dados
+              </button>
             </div>
           </div>
+
+          {/* Heatmap Color Selector */}
+          {mapDisplayMode !== "hidden" && (
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4 text-muted-foreground" />
+              <select
+                value={heatmapColor}
+                onChange={(e) => setHeatmapColor(e.target.value as HeatmapPreset)}
+                disabled={!!companyFilter}
+                className="rounded-md border border-telemetry-panel-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                title={companyFilter ? "Cor automatica baseada na empresa selecionada" : "Escolher cor do heatmap"}
+              >
+                <optgroup label="Cores Basicas">
+                  <option value="neutral">Neutro (Arco-iris)</option>
+                  <option value="blue">Azul</option>
+                  <option value="green">Verde</option>
+                  <option value="red">Vermelho</option>
+                  <option value="orange">Laranja</option>
+                  <option value="purple">Roxo</option>
+                </optgroup>
+                <optgroup label="Cores Adicionais">
+                  <option value="cyan">Ciano</option>
+                  <option value="teal">Teal</option>
+                  <option value="pink">Rosa</option>
+                  <option value="amber">Ambar</option>
+                  <option value="brown">Marrom</option>
+                </optgroup>
+                <optgroup label="Preenchimentos Geograficos">
+                  <option value="countryFill">Pais (Sutil)</option>
+                  <option value="stateFill">Estado (Sutil)</option>
+                  <option value="cityFill">Cidade (Sutil)</option>
+                  <option value="heatIntense">Intensidade Alta</option>
+                </optgroup>
+              </select>
+            </div>
+          )}
         </div>
       )}
 
@@ -541,178 +597,292 @@ export function TelemetryGeoPage() {
 
       {/* Main content */}
       <div className="relative flex flex-1 overflow-hidden">
-        {/* Map */}
-        <div ref={mapContainerRef} className="relative flex-1">
-          <Map ref={handleMapRef} center={[0, 20]} zoom={1.5} projection={{ type: mapProjection }}>
-            {/* Heatmap layer */}
-            {(vizMode === "heatmap" || vizMode === "both") && (
-              <MapHeatmapLayer
-                data={geoJsonData}
-                radius={25}
-                intensity={0.8}
-                opacity={vizMode === "both" ? 0.4 : 0.65}
-                colorGradient={activeHeatmapColor}
-                maxZoom={12}
-              />
-            )}
+        {/* Network Traffic Full View */}
+        {viewMode === "network" && (
+          <div className="flex-1 overflow-auto bg-telemetry-map-bg">
+            <TelemetryNetworkPanel events={filteredEvents} />
+          </div>
+        )}
 
-            {/* Event clusters/points */}
-            {(vizMode === "points" || vizMode === "both") && (
-              <MapClusterLayer
-                data={geoJsonData}
-                clusterRadius={60}
-                clusterMaxZoom={12}
-                clusterColors={[
-                  "var(--telemetry-cluster-small)",
-                  "var(--telemetry-cluster-medium)",
-                  "var(--telemetry-cluster-large)",
-                ]}
-                clusterThresholds={[10, 50]}
-                pointColor="var(--telemetry-point-default)"
-                onPointClick={handlePointClick}
-              />
-            )}
+        {/* Telemetry View - Hidden Map Mode (Data Only) */}
+        {viewMode === "telemetry" && mapDisplayMode === "hidden" && (
+          <div className="flex flex-1 overflow-hidden">
+            <div className="flex-1 overflow-auto bg-telemetry-map-bg p-4">
+              <TelemetryDataView events={filteredEvents} rankings={allRankings} />
+            </div>
+            <TelemetryGeoSidebar
+              events={filteredEvents}
+              selectedEventId={selectedEvent?.id}
+              onEventSelect={handleEventSelect}
+              filters={filters}
+              onFiltersChange={setFilters}
+              rankings={allRankings}
+              activeRankingFilter={activeRankingFilter}
+              onRankingClick={handleRankingClick}
+              onClearRankingFilter={handleClearRankingFilter}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+          </div>
+        )}
 
-            {/* Selected event popup */}
-            {selectedEvent && (
-              <MapPopup
-                longitude={selectedEvent.location.longitude}
-                latitude={selectedEvent.location.latitude}
-                onClose={handleClosePopup}
-                closeButton
-                offset={20}
-              >
-                <div className="min-w-[220px] rounded-lg border border-telemetry-popup-border bg-telemetry-popup-bg p-3 shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: getEventTypeColor(selectedEvent.type) }}
-                    />
-                    <span className="text-sm font-medium text-foreground">
-                      {getEventTypeLabel(selectedEvent.type)}
-                    </span>
-                    <span className="ml-auto text-xs text-muted-foreground">
-                      {formatRelativeTime(selectedEvent.timestamp)}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {selectedEvent.location.city && <span>{selectedEvent.location.city}, </span>}
-                    {selectedEvent.location.state && <span>{selectedEvent.location.state}, </span>}
-                    <span>{selectedEvent.location.country}</span>
-                  </div>
-                  {selectedEvent.tenant && (
-                    <div className="mt-2 rounded bg-muted px-2 py-1 text-xs">
-                      <span className="text-muted-foreground">Tenant: </span>
-                      <span className="font-medium">{selectedEvent.tenant.name}</span>
-                      {selectedEvent.tenant.groupName && (
-                        <span className="text-muted-foreground"> ({selectedEvent.tenant.groupName})</span>
+        {/* Telemetry View - Minimal Map Mode */}
+        {viewMode === "telemetry" && mapDisplayMode === "minimal" && (
+          <div className="flex flex-1 flex-col overflow-hidden lg:flex-row">
+            {/* Minimized Map */}
+            <div ref={mapContainerRef} className="relative h-48 w-full lg:h-full lg:w-80">
+              <Map ref={handleMapRef} center={[0, 20]} zoom={1} projection={{ type: mapProjection }}>
+                {(vizMode === "heatmap" || vizMode === "both") && (
+                  <MapHeatmapLayer
+                    data={geoJsonData}
+                    radius={20}
+                    intensity={0.8}
+                    opacity={0.5}
+                    colorGradient={activeHeatmapColor}
+                    maxZoom={12}
+                  />
+                )}
+                {(vizMode === "points" || vizMode === "both") && (
+                  <MapClusterLayer
+                    data={geoJsonData}
+                    clusterRadius={60}
+                    clusterMaxZoom={12}
+                    clusterColors={[
+                      "var(--telemetry-cluster-small)",
+                      "var(--telemetry-cluster-medium)",
+                      "var(--telemetry-cluster-large)",
+                    ]}
+                    clusterThresholds={[10, 50]}
+                    pointColor="var(--telemetry-point-default)"
+                    onPointClick={handlePointClick}
+                  />
+                )}
+                {selectedEvent && (
+                  <MapPopup
+                    longitude={selectedEvent.location.longitude}
+                    latitude={selectedEvent.location.latitude}
+                    onClose={handleClosePopup}
+                    closeButton
+                    offset={20}
+                  >
+                    <div className="min-w-[180px] rounded-lg border border-telemetry-popup-border bg-telemetry-popup-bg p-2 text-xs shadow-lg">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-2 w-2 rounded-full"
+                          style={{ backgroundColor: getEventTypeColor(selectedEvent.type) }}
+                        />
+                        <span className="font-medium">{getEventTypeLabel(selectedEvent.type)}</span>
+                      </div>
+                      <div className="mt-1 text-muted-foreground">
+                        {selectedEvent.location.city || selectedEvent.location.country}
+                      </div>
+                    </div>
+                  </MapPopup>
+                )}
+                <MapControls position="bottom-right" showZoom />
+              </Map>
+              {!mapReady && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-telemetry-overlay-bg">
+                  <TelemetryLoadingState message="Carregando..." />
+                </div>
+              )}
+            </div>
+            {/* Data Panel */}
+            <div className="flex-1 overflow-auto bg-telemetry-map-bg p-4">
+              <TelemetryDataView events={filteredEvents} rankings={allRankings} />
+            </div>
+            <TelemetryGeoSidebar
+              events={filteredEvents}
+              selectedEventId={selectedEvent?.id}
+              onEventSelect={handleEventSelect}
+              filters={filters}
+              onFiltersChange={setFilters}
+              rankings={allRankings}
+              activeRankingFilter={activeRankingFilter}
+              onRankingClick={handleRankingClick}
+              onClearRankingFilter={handleClearRankingFilter}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+          </div>
+        )}
+
+        {/* Telemetry View - Full Map Mode */}
+        {viewMode === "telemetry" && mapDisplayMode === "full" && (
+          <>
+            <div ref={mapContainerRef} className="relative flex-1">
+              <Map ref={handleMapRef} center={[0, 20]} zoom={1.5} projection={{ type: mapProjection }}>
+                {/* Heatmap layer */}
+                {(vizMode === "heatmap" || vizMode === "both") && (
+                  <MapHeatmapLayer
+                    data={geoJsonData}
+                    radius={25}
+                    intensity={0.8}
+                    opacity={vizMode === "both" ? 0.4 : 0.65}
+                    colorGradient={activeHeatmapColor}
+                    maxZoom={12}
+                  />
+                )}
+
+                {/* Event clusters/points */}
+                {(vizMode === "points" || vizMode === "both") && (
+                  <MapClusterLayer
+                    data={geoJsonData}
+                    clusterRadius={60}
+                    clusterMaxZoom={12}
+                    clusterColors={[
+                      "var(--telemetry-cluster-small)",
+                      "var(--telemetry-cluster-medium)",
+                      "var(--telemetry-cluster-large)",
+                    ]}
+                    clusterThresholds={[10, 50]}
+                    pointColor="var(--telemetry-point-default)"
+                    onPointClick={handlePointClick}
+                  />
+                )}
+
+                {/* Selected event popup */}
+                {selectedEvent && (
+                  <MapPopup
+                    longitude={selectedEvent.location.longitude}
+                    latitude={selectedEvent.location.latitude}
+                    onClose={handleClosePopup}
+                    closeButton
+                    offset={20}
+                  >
+                    <div className="min-w-[220px] rounded-lg border border-telemetry-popup-border bg-telemetry-popup-bg p-3 shadow-lg">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: getEventTypeColor(selectedEvent.type) }}
+                        />
+                        <span className="text-sm font-medium text-foreground">
+                          {getEventTypeLabel(selectedEvent.type)}
+                        </span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {formatRelativeTime(selectedEvent.timestamp)}
+                        </span>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        {selectedEvent.location.city && <span>{selectedEvent.location.city}, </span>}
+                        {selectedEvent.location.state && <span>{selectedEvent.location.state}, </span>}
+                        <span>{selectedEvent.location.country}</span>
+                      </div>
+                      {selectedEvent.tenant && (
+                        <div className="mt-2 rounded bg-muted px-2 py-1 text-xs">
+                          <span className="text-muted-foreground">Tenant: </span>
+                          <span className="font-medium">{selectedEvent.tenant.name}</span>
+                          {selectedEvent.tenant.groupName && (
+                            <span className="text-muted-foreground"> ({selectedEvent.tenant.groupName})</span>
+                          )}
+                        </div>
+                      )}
+                      {selectedEvent.source && (
+                        <div className="mt-1 flex gap-2 text-xs text-muted-foreground">
+                          <span>{selectedEvent.source.platform}</span>
+                          {selectedEvent.source.browser && <span>• {selectedEvent.source.browser}</span>}
+                        </div>
                       )}
                     </div>
+                  </MapPopup>
+                )}
+
+                <MapControls position="bottom-right" showZoom showCompass showFullscreen />
+              </Map>
+
+              {/* Map loading overlay */}
+              {!mapReady && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-telemetry-overlay-bg">
+                  <TelemetryLoadingState message="Carregando mapa..." />
+                </div>
+              )}
+
+              {/* Map visualization controls - moved up to avoid collision */}
+              <div className="absolute bottom-36 right-3 z-10 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={handleToggleVizMode}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-telemetry-panel-border bg-telemetry-panel shadow-md transition-colors hover:bg-telemetry-feed-item-hover"
+                  title={vizMode === "both" ? "Apenas pontos" : vizMode === "points" ? "Apenas heatmap" : "Pontos + heatmap"}
+                >
+                  <Layers className={cn("h-5 w-5", vizMode === "both" ? "text-primary" : "text-muted-foreground")} />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleToggleProjection}
+                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-telemetry-panel-border bg-telemetry-panel shadow-md transition-colors hover:bg-telemetry-feed-item-hover"
+                  title={mapProjection === "globe" ? "Mapa plano" : "Globo 3D"}
+                >
+                  {mapProjection === "globe" ? (
+                    <MapIcon className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <Globe className="h-5 w-5 text-muted-foreground" />
                   )}
-                  {selectedEvent.source && (
-                    <div className="mt-1 flex gap-2 text-xs text-muted-foreground">
-                      <span>{selectedEvent.source.platform}</span>
-                      {selectedEvent.source.browser && <span>• {selectedEvent.source.browser}</span>}
+                </button>
+              </div>
+
+              {/* Map legend */}
+              <div className="absolute left-4 top-4 flex flex-col gap-2">
+                <div className="rounded-lg border border-telemetry-panel-border bg-telemetry-panel/95 px-3 py-2 text-xs backdrop-blur-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium text-muted-foreground">Visualizacao:</span>
+                    <div className="flex items-center gap-2">
+                      {(vizMode === "points" || vizMode === "both") && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-telemetry-point-default" />
+                          <span>Pontos</span>
+                        </span>
+                      )}
+                      {(vizMode === "heatmap" || vizMode === "both") && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-4 rounded bg-gradient-to-r from-telemetry-heatmap-low via-telemetry-heatmap-medium to-telemetry-heatmap-high" />
+                          <span>Densidade</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {companyFilter && (
+                    <div className="mt-1 flex items-center gap-2 border-t border-telemetry-panel-border pt-1">
+                      <span className="text-muted-foreground">Cor:</span>
+                      <span className="capitalize">{COMPANY_COLORS[companyFilter]}</span>
                     </div>
                   )}
                 </div>
-              </MapPopup>
-            )}
 
-            <MapControls position="bottom-right" showZoom showCompass showFullscreen />
-          </Map>
-
-          {/* Map loading overlay */}
-          {!mapReady && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-telemetry-overlay-bg">
-              <TelemetryLoadingState message="Carregando mapa..." />
-            </div>
-          )}
-
-          {/* Map visualization controls - moved up to avoid collision */}
-          <div className="absolute bottom-36 right-3 z-10 flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={handleToggleVizMode}
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-telemetry-panel-border bg-telemetry-panel shadow-md transition-colors hover:bg-telemetry-feed-item-hover"
-              title={vizMode === "both" ? "Apenas pontos" : vizMode === "points" ? "Apenas heatmap" : "Pontos + heatmap"}
-            >
-              <Layers className={cn("h-5 w-5", vizMode === "both" ? "text-primary" : "text-muted-foreground")} />
-            </button>
-            <button
-              type="button"
-              onClick={handleToggleProjection}
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-telemetry-panel-border bg-telemetry-panel shadow-md transition-colors hover:bg-telemetry-feed-item-hover"
-              title={mapProjection === "globe" ? "Mapa plano" : "Globo 3D"}
-            >
-              {mapProjection === "globe" ? (
-                <MapIcon className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <Globe className="h-5 w-5 text-muted-foreground" />
-              )}
-            </button>
-          </div>
-
-          {/* Map legend */}
-          <div className="absolute left-4 top-4 flex flex-col gap-2">
-            <div className="rounded-lg border border-telemetry-panel-border bg-telemetry-panel/95 px-3 py-2 text-xs backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <span className="font-medium text-muted-foreground">Visualizacao:</span>
-                <div className="flex items-center gap-2">
-                  {(vizMode === "points" || vizMode === "both") && (
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-telemetry-point-default" />
-                      <span>Pontos</span>
+                {/* Live Activity Indicator */}
+                <div className="rounded-lg border border-telemetry-panel-border bg-telemetry-panel/95 px-3 py-2 text-xs backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
                     </span>
-                  )}
-                  {(vizMode === "heatmap" || vizMode === "both") && (
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2 w-4 rounded bg-gradient-to-r from-telemetry-heatmap-low via-telemetry-heatmap-medium to-telemetry-heatmap-high" />
-                      <span>Densidade</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">
+                      {mockSummary.liveNow} usuarios ativos agora
                     </span>
-                  )}
+                  </div>
+                  <div className="mt-1 text-muted-foreground">
+                    Ultimo evento: {formatRelativeTime(filteredEvents[0]?.timestamp || new Date().toISOString())}
+                  </div>
                 </div>
               </div>
-              {companyFilter && (
-                <div className="mt-1 flex items-center gap-2 border-t border-telemetry-panel-border pt-1">
-                  <span className="text-muted-foreground">Cor:</span>
-                  <span className="capitalize">{COMPANY_COLORS[companyFilter]}</span>
-                </div>
-              )}
             </div>
 
-            {/* Creative Addition 2: Live Activity Indicator */}
-            <div className="rounded-lg border border-telemetry-panel-border bg-telemetry-panel/95 px-3 py-2 text-xs backdrop-blur-sm">
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-                </span>
-                <span className="font-medium text-green-600 dark:text-green-400">
-                  {mockSummary.liveNow} usuarios ativos agora
-                </span>
-              </div>
-              <div className="mt-1 text-muted-foreground">
-                Ultimo evento: {formatRelativeTime(filteredEvents[0]?.timestamp || new Date().toISOString())}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <TelemetryGeoSidebar
-          events={filteredEvents}
-          selectedEventId={selectedEvent?.id}
-          onEventSelect={handleEventSelect}
-          filters={filters}
-          onFiltersChange={setFilters}
-          rankings={allRankings}
-          activeRankingFilter={activeRankingFilter}
-          onRankingClick={handleRankingClick}
-          onClearRankingFilter={handleClearRankingFilter}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        />
+            {/* Sidebar */}
+            <TelemetryGeoSidebar
+              events={filteredEvents}
+              selectedEventId={selectedEvent?.id}
+              onEventSelect={handleEventSelect}
+              filters={filters}
+              onFiltersChange={setFilters}
+              rankings={allRankings}
+              activeRankingFilter={activeRankingFilter}
+              onRankingClick={handleRankingClick}
+              onClearRankingFilter={handleClearRankingFilter}
+              isCollapsed={isSidebarCollapsed}
+              onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            />
+          </>
+        )}
       </div>
     </div>
   );

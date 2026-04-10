@@ -9,6 +9,8 @@ export { TelemetryGeoRanking } from "./telemetry-geo-ranking";
 export { TelemetryGeoDrilldown } from "./telemetry-geo-drilldown";
 export { TelemetryEventFeed } from "./telemetry-event-feed";
 export { TelemetryFeedItem } from "./telemetry-feed-item";
+export { TelemetryNetworkPanel } from "./telemetry-network-panel";
+export { TelemetryDataView } from "./telemetry-data-view";
 export {
   TelemetryEmptyState,
   TelemetryLoadingState,
