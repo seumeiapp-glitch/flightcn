@@ -1515,6 +1515,68 @@ function MapClusterLayer<
   return null;
 }
 
+// Predefined heatmap color presets with RGBA for easy customization
+export const HEATMAP_PRESETS = {
+  neutral: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(59, 130, 246, 0.4)"],  // blue
+    [0.4, "rgba(34, 197, 94, 0.6)"],   // green
+    [0.6, "rgba(250, 204, 21, 0.75)"], // yellow
+    [0.8, "rgba(249, 115, 22, 0.85)"], // orange
+    [1, "rgba(239, 68, 68, 0.95)"],    // red
+  ],
+  blue: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(191, 219, 254, 0.4)"],  // blue-100
+    [0.4, "rgba(147, 197, 253, 0.55)"], // blue-200
+    [0.6, "rgba(59, 130, 246, 0.7)"],   // blue-500
+    [0.8, "rgba(37, 99, 235, 0.85)"],   // blue-600
+    [1, "rgba(29, 78, 216, 0.95)"],     // blue-700
+  ],
+  green: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(187, 247, 208, 0.4)"],  // green-100
+    [0.4, "rgba(134, 239, 172, 0.55)"], // green-200
+    [0.6, "rgba(34, 197, 94, 0.7)"],    // green-500
+    [0.8, "rgba(22, 163, 74, 0.85)"],   // green-600
+    [1, "rgba(21, 128, 61, 0.95)"],     // green-700
+  ],
+  red: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(254, 202, 202, 0.4)"],  // red-100
+    [0.4, "rgba(252, 165, 165, 0.55)"], // red-200
+    [0.6, "rgba(239, 68, 68, 0.7)"],    // red-500
+    [0.8, "rgba(220, 38, 38, 0.85)"],   // red-600
+    [1, "rgba(185, 28, 28, 0.95)"],     // red-700
+  ],
+  orange: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(254, 215, 170, 0.4)"],  // orange-100
+    [0.4, "rgba(253, 186, 116, 0.55)"], // orange-200
+    [0.6, "rgba(249, 115, 22, 0.7)"],   // orange-500
+    [0.8, "rgba(234, 88, 12, 0.85)"],   // orange-600
+    [1, "rgba(194, 65, 12, 0.95)"],     // orange-700
+  ],
+  purple: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(233, 213, 255, 0.4)"],  // purple-100
+    [0.4, "rgba(216, 180, 254, 0.55)"], // purple-200
+    [0.6, "rgba(168, 85, 247, 0.7)"],   // purple-500
+    [0.8, "rgba(147, 51, 234, 0.85)"],  // purple-600
+    [1, "rgba(126, 34, 206, 0.95)"],    // purple-700
+  ],
+  brown: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(214, 211, 209, 0.4)"],  // stone-200
+    [0.4, "rgba(168, 162, 158, 0.55)"], // stone-400
+    [0.6, "rgba(120, 113, 108, 0.7)"],  // stone-500
+    [0.8, "rgba(87, 83, 78, 0.85)"],    // stone-600
+    [1, "rgba(68, 64, 60, 0.95)"],      // stone-700
+  ],
+} as const;
+
+export type HeatmapPreset = keyof typeof HEATMAP_PRESETS;
+
 type MapHeatmapLayerProps = {
   /** GeoJSON FeatureCollection data with Point geometry */
   data: GeoJSON.FeatureCollection<GeoJSON.Point>;
@@ -1526,8 +1588,8 @@ type MapHeatmapLayerProps = {
   radius?: number;
   /** Opacity from 0 to 1 (default: 0.6) */
   opacity?: number;
-  /** Color gradient from low to high density. Array of [stop, color] pairs (0-1 range) */
-  colorGradient?: Array<[number, string]>;
+  /** Color preset name OR custom gradient. Array of [stop, color] pairs (0-1 range) */
+  colorGradient?: Array<[number, string]> | HeatmapPreset;
   /** Maximum zoom level for heatmap rendering (default: 14) */
   maxZoom?: number;
 };
@@ -1550,17 +1612,14 @@ function MapHeatmapLayer({
   const sourceId = `heatmap-source-${id}`;
   const layerId = `heatmap-layer-${id}`;
 
-  // Default neutral color gradient (transparent -> blue -> cyan -> green -> yellow)
-  const defaultGradient: Array<[number, string]> = [
-    [0, "rgba(0, 0, 0, 0)"],
-    [0.2, "rgba(59, 130, 246, 0.4)"],
-    [0.4, "rgba(34, 197, 94, 0.6)"],
-    [0.6, "rgba(250, 204, 21, 0.75)"],
-    [0.8, "rgba(249, 115, 22, 0.85)"],
-    [1, "rgba(239, 68, 68, 0.95)"],
-  ];
-
-  const gradient = colorGradient ?? defaultGradient;
+  // Resolve gradient: preset name or custom array
+  const gradient = useMemo(() => {
+    if (!colorGradient) return HEATMAP_PRESETS.neutral;
+    if (typeof colorGradient === "string") {
+      return HEATMAP_PRESETS[colorGradient] ?? HEATMAP_PRESETS.neutral;
+    }
+    return colorGradient;
+  }, [colorGradient]);
 
   useEffect(() => {
     if (!isLoaded || !map) return;
@@ -1667,6 +1726,7 @@ export {
   MapRoute,
   MapClusterLayer,
   MapHeatmapLayer,
+  HEATMAP_PRESETS,
 };
 
-export type { MapRef, MapViewport };
+export type { MapRef, MapViewport, HeatmapPreset };
