@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type MapLibreGL from "maplibre-gl";
+import { Globe, Map as MapIcon } from "lucide-react";
 
 import {
   Map,
@@ -40,10 +41,7 @@ import {
 import { TelemetryGeoHeader } from "./telemetry-geo-header";
 import { TelemetryGeoSidebar } from "./telemetry-geo-sidebar";
 import { TelemetryGeoDrilldown } from "./telemetry-geo-drilldown";
-import {
-  TelemetryLoadingState,
-  TelemetryErrorState,
-} from "./telemetry-states";
+import { TelemetryLoadingState } from "./telemetry-states";
 import { cn } from "@/lib/utils";
 
 type DrilldownLevel = {
@@ -60,12 +58,12 @@ const defaultFilters: TelemetryFilters = {
   criticalOnly: false,
 };
 
-// Map load timeout in ms
-const MAP_LOAD_TIMEOUT = 15000;
+type MapProjection = "globe" | "mercator";
 
 export function TelemetryGeoPage() {
   const mapRef = useRef<MapLibreGL.Map | null>(null);
-  const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [mapReady, setMapReady] = useState(false);
+  const [mapProjection, setMapProjection] = useState<MapProjection>("globe");
   const [events, setEvents] = useState<TelemetryEvent[]>(mockEvents);
   const [selectedEvent, setSelectedEvent] = useState<TelemetryEvent | null>(null);
   const [filters, setFilters] = useState<TelemetryFilters>(defaultFilters);
@@ -79,18 +77,22 @@ export function TelemetryGeoPage() {
     { level: "global", name: "Global" },
   ]);
 
-  // Map load timeout handler
+  // Detect map ready via ref polling (Map component manages internal isLoaded)
   useEffect(() => {
-    if (mapStatus !== "loading") return;
-
-    const timeout = setTimeout(() => {
-      if (mapStatus === "loading") {
-        setMapStatus("error");
+    const checkMapReady = () => {
+      if (mapRef.current && mapRef.current.isStyleLoaded()) {
+        setMapReady(true);
       }
-    }, MAP_LOAD_TIMEOUT);
+    };
 
-    return () => clearTimeout(timeout);
-  }, [mapStatus]);
+    // Check immediately
+    checkMapReady();
+
+    // Poll for ready state
+    const interval = setInterval(checkMapReady, 200);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter events based on current filters + active ranking
   const filteredEvents = useMemo(() => {
@@ -141,11 +143,6 @@ export function TelemetryGeoPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Handle map load
-  const handleMapLoad = useCallback(() => {
-    setMapStatus("ready");
-  }, []);
-
   // Handle map ref assignment
   const handleMapRef = useCallback((map: MapLibreGL.Map | null) => {
     mapRef.current = map;
@@ -155,14 +152,14 @@ export function TelemetryGeoPage() {
   const handleEventSelect = useCallback((event: TelemetryEvent) => {
     setSelectedEvent(event);
 
-    if (mapRef.current && mapStatus === "ready") {
+    if (mapRef.current && mapReady) {
       mapRef.current.flyTo({
         center: [event.location.longitude, event.location.latitude],
         zoom: 10,
         duration: 1500,
       });
     }
-  }, [mapStatus]);
+  }, [mapReady]);
 
   // Handle cluster point click
   const handlePointClick = useCallback(
@@ -174,7 +171,7 @@ export function TelemetryGeoPage() {
       const event = events.find((e) => e.id === eventId);
       if (event) {
         setSelectedEvent(event);
-        if (mapRef.current && mapStatus === "ready") {
+        if (mapRef.current && mapReady) {
           mapRef.current.flyTo({
             center: coordinates,
             zoom: Math.max(mapRef.current.getZoom(), 10),
@@ -183,7 +180,7 @@ export function TelemetryGeoPage() {
         }
       }
     },
-    [events, mapStatus]
+    [events, mapReady]
   );
 
   // Handle ranking click - focus map on region and apply filter
@@ -197,7 +194,7 @@ export function TelemetryGeoPage() {
       });
 
       // Fly to coordinates if available
-      if (ranking.coordinates && mapRef.current && mapStatus === "ready") {
+      if (ranking.coordinates && mapRef.current && mapReady) {
         const zoom =
           type === "country" ? 5 :
           type === "city" ? 10 :
@@ -209,7 +206,7 @@ export function TelemetryGeoPage() {
           zoom,
           duration: 1500,
         });
-      } else if (type === "country" && mapRef.current && mapStatus === "ready") {
+      } else if (type === "country" && mapRef.current && mapReady) {
         // Fallback: find first event in that region
         const event = events.find(
           (e) => e.location.countryCode === ranking.code
@@ -232,7 +229,7 @@ export function TelemetryGeoPage() {
         setFilters((prev) => ({ ...prev, country: ranking.code, geoLevel: "country" }));
       }
     },
-    [events, mapStatus]
+    [events, mapReady]
   );
 
   // Clear ranking filter
@@ -248,7 +245,7 @@ export function TelemetryGeoPage() {
 
       const zoomLevel = getZoomForGeoLevel(level);
 
-      if (level === "global" && mapRef.current && mapStatus === "ready") {
+      if (level === "global" && mapRef.current && mapReady) {
         mapRef.current.flyTo({
           center: [0, 20],
           zoom: 1.5,
@@ -262,11 +259,11 @@ export function TelemetryGeoPage() {
           state: undefined,
           city: undefined,
         }));
-      } else if (mapRef.current && mapStatus === "ready") {
+      } else if (mapRef.current && mapReady) {
         mapRef.current.zoomTo(zoomLevel, { duration: 1000 });
       }
     },
-    [mapStatus]
+    [mapReady]
   );
 
   // Close popup
@@ -274,9 +271,9 @@ export function TelemetryGeoPage() {
     setSelectedEvent(null);
   }, []);
 
-  // Retry map load
-  const handleRetryMap = useCallback(() => {
-    setMapStatus("loading");
+  // Toggle map projection (globe <-> mercator)
+  const handleToggleProjection = useCallback(() => {
+    setMapProjection((prev) => (prev === "globe" ? "mercator" : "globe"));
   }, []);
 
   // All rankings organized by type
@@ -327,114 +324,115 @@ export function TelemetryGeoPage() {
       <div className="relative flex flex-1 overflow-hidden">
         {/* Map */}
         <div className="relative flex-1">
-          {mapStatus === "error" ? (
-            <div className="flex h-full items-center justify-center bg-telemetry-map-bg">
-              <TelemetryErrorState
-                title="Erro ao carregar mapa"
-                message="Nao foi possivel carregar o mapa. Verifique sua conexao e tente novamente."
-                onRetry={handleRetryMap}
-              />
-            </div>
-          ) : (
-            <Map
-              ref={handleMapRef}
-              center={[0, 20]}
-              zoom={1.5}
-              projection={{ type: "globe" }}
-              onLoad={handleMapLoad}
-            >
-              {mapStatus === "ready" && (
-                <>
-                  {/* Event clusters */}
-                  <MapClusterLayer
-                    data={geoJsonData}
-                    clusterRadius={60}
-                    clusterMaxZoom={12}
-                    clusterColors={[
-                      "var(--telemetry-cluster-small)",
-                      "var(--telemetry-cluster-medium)",
-                      "var(--telemetry-cluster-large)",
-                    ]}
-                    clusterThresholds={[10, 50]}
-                    pointColor="var(--telemetry-marker-primary)"
-                    onPointClick={handlePointClick}
-                  />
+          <Map
+            ref={handleMapRef}
+            center={[0, 20]}
+            zoom={1.5}
+            projection={{ type: mapProjection }}
+          >
+              {/* Event clusters */}
+            <MapClusterLayer
+              data={geoJsonData}
+              clusterRadius={60}
+              clusterMaxZoom={12}
+              clusterColors={[
+                "var(--telemetry-cluster-small)",
+                "var(--telemetry-cluster-medium)",
+                "var(--telemetry-cluster-large)",
+              ]}
+              clusterThresholds={[10, 50]}
+              pointColor="var(--telemetry-marker-primary)"
+              onPointClick={handlePointClick}
+            />
 
-                  {/* Selected event popup */}
-                  {selectedEvent && (
-                    <MapPopup
-                      longitude={selectedEvent.location.longitude}
-                      latitude={selectedEvent.location.latitude}
-                      onClose={handleClosePopup}
-                      closeButton
-                      offset={20}
-                    >
-                      <div className="min-w-[220px] rounded-lg border border-telemetry-popup-border bg-telemetry-popup-bg p-3 shadow-lg">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="h-2.5 w-2.5 rounded-full"
-                            style={{
-                              backgroundColor: getEventTypeColor(selectedEvent.type),
-                            }}
-                          />
-                          <span className="text-sm font-medium text-foreground">
-                            {getEventTypeLabel(selectedEvent.type)}
-                          </span>
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            {formatRelativeTime(selectedEvent.timestamp)}
-                          </span>
-                        </div>
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          {selectedEvent.location.city && (
-                            <span>{selectedEvent.location.city}, </span>
-                          )}
-                          {selectedEvent.location.state && (
-                            <span>{selectedEvent.location.state}, </span>
-                          )}
-                          <span>{selectedEvent.location.country}</span>
-                        </div>
-                        {selectedEvent.tenant && (
-                          <div className="mt-2 rounded bg-muted px-2 py-1 text-xs">
-                            <span className="text-muted-foreground">Tenant: </span>
-                            <span className="font-medium">{selectedEvent.tenant.name}</span>
-                            {selectedEvent.tenant.groupName && (
-                              <span className="text-muted-foreground"> ({selectedEvent.tenant.groupName})</span>
-                            )}
-                          </div>
-                        )}
-                        {selectedEvent.source && (
-                          <div className="mt-1 flex gap-2 text-xs text-muted-foreground">
-                            <span>{selectedEvent.source.platform}</span>
-                            {selectedEvent.source.browser && (
-                              <span>• {selectedEvent.source.browser}</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </MapPopup>
+            {/* Selected event popup */}
+            {selectedEvent && (
+              <MapPopup
+                longitude={selectedEvent.location.longitude}
+                latitude={selectedEvent.location.latitude}
+                onClose={handleClosePopup}
+                closeButton
+                offset={20}
+              >
+                <div className="min-w-[220px] rounded-lg border border-telemetry-popup-border bg-telemetry-popup-bg p-3 shadow-lg">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{
+                        backgroundColor: getEventTypeColor(selectedEvent.type),
+                      }}
+                    />
+                    <span className="text-sm font-medium text-foreground">
+                      {getEventTypeLabel(selectedEvent.type)}
+                    </span>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {formatRelativeTime(selectedEvent.timestamp)}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    {selectedEvent.location.city && (
+                      <span>{selectedEvent.location.city}, </span>
+                    )}
+                    {selectedEvent.location.state && (
+                      <span>{selectedEvent.location.state}, </span>
+                    )}
+                    <span>{selectedEvent.location.country}</span>
+                  </div>
+                  {selectedEvent.tenant && (
+                    <div className="mt-2 rounded bg-muted px-2 py-1 text-xs">
+                      <span className="text-muted-foreground">Tenant: </span>
+                      <span className="font-medium">{selectedEvent.tenant.name}</span>
+                      {selectedEvent.tenant.groupName && (
+                        <span className="text-muted-foreground"> ({selectedEvent.tenant.groupName})</span>
+                      )}
+                    </div>
                   )}
+                  {selectedEvent.source && (
+                    <div className="mt-1 flex gap-2 text-xs text-muted-foreground">
+                      <span>{selectedEvent.source.platform}</span>
+                      {selectedEvent.source.browser && (
+                        <span>• {selectedEvent.source.browser}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </MapPopup>
+            )}
 
-                  {/* Map controls */}
-                  <MapControls
-                    position="bottom-right"
-                    showZoom
-                    showCompass
-                    showFullscreen
-                  />
-                </>
-              )}
-            </Map>
-          )}
+            {/* Map controls */}
+            <MapControls
+              position="bottom-right"
+              showZoom
+              showCompass
+              showFullscreen
+            />
+          </Map>
 
           {/* Map loading overlay - shows only while loading, not blocking sidebar */}
-          {mapStatus === "loading" && (
+          {!mapReady && (
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-telemetry-overlay-bg">
               <TelemetryLoadingState message="Carregando mapa..." />
             </div>
           )}
 
+          {/* Projection toggle button (Globe <-> Flat) */}
+          <div className="absolute bottom-24 right-3 z-10">
+            <button
+              type="button"
+              onClick={handleToggleProjection}
+              className="flex h-10 w-10 items-center justify-center rounded-lg border border-telemetry-panel-border bg-telemetry-panel shadow-md transition-colors hover:bg-telemetry-feed-item-hover"
+              title={mapProjection === "globe" ? "Mudar para mapa plano" : "Mudar para globo 3D"}
+            >
+              {mapProjection === "globe" ? (
+                <MapIcon className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <Globe className="h-5 w-5 text-muted-foreground" />
+              )}
+            </button>
+          </div>
+
           {/* Active filters indicator on map */}
-          {mapStatus === "ready" && (filters.eventTypes.length > 0 ||
+          {mapReady && (filters.eventTypes.length > 0 ||
             filters.country ||
             filters.criticalOnly ||
             activeRankingFilter) && (
