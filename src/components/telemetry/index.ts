@@ -12,8 +12,23 @@ export { TelemetryFeedItem } from "./telemetry-feed-item";
 export {
   TelemetryEmptyState,
   TelemetryLoadingState,
+  TelemetryErrorState,
   TelemetryConnectionStatus,
   TelemetryFeedSkeleton,
   TelemetryRankingSkeleton,
   TelemetryHeaderSkeleton,
 } from "./telemetry-states";
+
+// Re-export types for package consumers
+export type {
+  TelemetryEvent,
+  TelemetryFilters,
+  TelemetryRanking,
+  TelemetrySummary,
+  TelemetryEventType,
+  TelemetryPageConfig,
+  RankingType,
+  GeoLevel,
+  Platform,
+  Severity,
+} from "@/lib/telemetry/types";

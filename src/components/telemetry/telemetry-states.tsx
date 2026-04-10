@@ -101,6 +101,47 @@ export function TelemetryLoadingState({
   );
 }
 
+type ErrorStateProps = {
+  title?: string;
+  message?: string;
+  onRetry?: () => void;
+  className?: string;
+};
+
+export function TelemetryErrorState({
+  title = "Erro",
+  message = "Ocorreu um erro inesperado.",
+  onRetry,
+  className,
+}: ErrorStateProps) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-4 px-6 py-12 text-center",
+        className
+      )}
+    >
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+        <AlertCircle className="h-6 w-6 text-destructive" />
+      </div>
+      <div className="space-y-1">
+        <h3 className="text-sm font-medium text-foreground">{title}</h3>
+        <p className="max-w-xs text-xs text-muted-foreground">{message}</p>
+      </div>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Tentar novamente
+        </button>
+      )}
+    </div>
+  );
+}
+
 type ConnectionStatusProps = {
   isConnected: boolean;
   className?: string;

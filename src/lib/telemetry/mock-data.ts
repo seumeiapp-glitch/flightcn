@@ -7,6 +7,8 @@ import type {
   Platform,
   DeviceType,
   Severity,
+  TelemetryGroup,
+  TelemetryOrganization,
 } from "./types";
 
 // Realistic global distribution with concentration in key regions
@@ -60,15 +62,34 @@ const devices: DeviceType[] = ["mobile", "tablet", "desktop"];
 const browsers = ["Chrome", "Safari", "Firefox", "Edge", "Arc"];
 const osOptions = ["Windows", "macOS", "iOS", "Android", "Linux"];
 
+// Matriz Groups (holding level)
+const groups: TelemetryGroup[] = [
+  { id: "g1", name: "Grupo Alpha", code: "ALPHA", country: "Brazil", countryCode: "BR" },
+  { id: "g2", name: "Grupo Beta Networks", code: "BETA", country: "United States", countryCode: "US" },
+  { id: "g3", name: "Grupo Gamma Holdings", code: "GAMMA", country: "Germany", countryCode: "DE" },
+  { id: "g4", name: "Grupo Delta Corp", code: "DELTA", country: "Japan", countryCode: "JP" },
+];
+
+// Organizations within groups
+const organizations: TelemetryOrganization[] = [
+  { id: "o1", name: "Alpha Sistemas", code: "ALPHA-SIS", groupId: "g1", groupName: "Grupo Alpha", country: "Brazil", countryCode: "BR" },
+  { id: "o2", name: "Alpha Tech", code: "ALPHA-TECH", groupId: "g1", groupName: "Grupo Alpha", country: "Brazil", countryCode: "BR" },
+  { id: "o3", name: "Beta Solutions", code: "BETA-SOL", groupId: "g2", groupName: "Grupo Beta Networks", country: "United States", countryCode: "US" },
+  { id: "o4", name: "Beta Cloud", code: "BETA-CLD", groupId: "g2", groupName: "Grupo Beta Networks", country: "United States", countryCode: "US" },
+  { id: "o5", name: "Gamma Industries", code: "GAMMA-IND", groupId: "g3", groupName: "Grupo Gamma Holdings", country: "Germany", countryCode: "DE" },
+  { id: "o6", name: "Delta Digital", code: "DELTA-DIG", groupId: "g4", groupName: "Grupo Delta Corp", country: "Japan", countryCode: "JP" },
+];
+
+// Tenants (Seumei level)
 const tenants = [
-  { id: "t1", name: "Acme Corp", workspace: "production" },
-  { id: "t2", name: "TechStart", workspace: "staging" },
-  { id: "t3", name: "GlobalTech", workspace: "production" },
-  { id: "t4", name: "InnovateCo", workspace: "development" },
-  { id: "t5", name: "NextGen Solutions", workspace: "production" },
-  { id: "t6", name: "Apex Industries", workspace: "production" },
-  { id: "t7", name: "Quantum Labs", workspace: "staging" },
-  { id: "t8", name: "Stellar Dynamics", workspace: "production" },
+  { id: "t1", name: "Acme Corp", workspace: "production", groupId: "g1", groupName: "Grupo Alpha" },
+  { id: "t2", name: "TechStart", workspace: "staging", groupId: "g2", groupName: "Grupo Beta Networks" },
+  { id: "t3", name: "GlobalTech", workspace: "production", groupId: "g1", groupName: "Grupo Alpha" },
+  { id: "t4", name: "InnovateCo", workspace: "development", groupId: "g3", groupName: "Grupo Gamma Holdings" },
+  { id: "t5", name: "NextGen Solutions", workspace: "production", groupId: "g2", groupName: "Grupo Beta Networks" },
+  { id: "t6", name: "Apex Industries", workspace: "production", groupId: "g4", groupName: "Grupo Delta Corp" },
+  { id: "t7", name: "Quantum Labs", workspace: "staging", groupId: "g1", groupName: "Grupo Alpha" },
+  { id: "t8", name: "Stellar Dynamics", workspace: "production", groupId: "g3", groupName: "Grupo Gamma Holdings" },
 ];
 
 function randomItem<T>(arr: T[]): T {
@@ -166,6 +187,53 @@ export const mockCityRankings: TelemetryRanking[] = [
   { name: "Paris", code: "PAR", count: 423, trend: 2.1 },
   { name: "Sydney", code: "SYD", count: 356, trend: 15.6 },
   { name: "Austin", code: "AUS", count: 312, trend: 34.2, isNew: true },
+];
+
+// Group rankings (Matriz level)
+export const mockGroupRankings: TelemetryRanking[] = [
+  { name: "Grupo Alpha", code: "ALPHA", count: 3421, trend: 18.5, type: "group", coordinates: [-46.6333, -23.5505], countryCode: "BR" },
+  { name: "Grupo Beta Networks", code: "BETA", count: 2156, trend: 12.3, type: "group", coordinates: [-122.4194, 37.7749], countryCode: "US" },
+  { name: "Grupo Gamma Holdings", code: "GAMMA", count: 1234, trend: 5.7, type: "group", coordinates: [13.405, 52.52], countryCode: "DE" },
+  { name: "Grupo Delta Corp", code: "DELTA", count: 892, trend: 32.1, type: "group", isNew: true, coordinates: [139.6503, 35.6762], countryCode: "JP" },
+];
+
+// Organization rankings
+export const mockOrganizationRankings: TelemetryRanking[] = [
+  { name: "Alpha Sistemas", code: "ALPHA-SIS", count: 1823, trend: 22.4, type: "organization", parentCode: "ALPHA", parentName: "Grupo Alpha", coordinates: [-46.6333, -23.5505], countryCode: "BR" },
+  { name: "Beta Solutions", code: "BETA-SOL", count: 1456, trend: 15.2, type: "organization", parentCode: "BETA", parentName: "Grupo Beta Networks", coordinates: [-122.4194, 37.7749], countryCode: "US" },
+  { name: "Alpha Tech", code: "ALPHA-TECH", count: 1234, trend: 8.9, type: "organization", parentCode: "ALPHA", parentName: "Grupo Alpha", coordinates: [-43.1729, -22.9068], countryCode: "BR" },
+  { name: "Gamma Industries", code: "GAMMA-IND", count: 987, trend: 3.2, type: "organization", parentCode: "GAMMA", parentName: "Grupo Gamma Holdings", coordinates: [13.405, 52.52], countryCode: "DE" },
+  { name: "Beta Cloud", code: "BETA-CLD", count: 756, trend: -2.1, type: "organization", parentCode: "BETA", parentName: "Grupo Beta Networks", coordinates: [-74.006, 40.7128], countryCode: "US" },
+  { name: "Delta Digital", code: "DELTA-DIG", count: 623, trend: 45.8, type: "organization", isNew: true, parentCode: "DELTA", parentName: "Grupo Delta Corp", coordinates: [139.6503, 35.6762], countryCode: "JP" },
+];
+
+// Tenant rankings (Seumei level)
+export const mockTenantRankings: TelemetryRanking[] = [
+  { name: "Acme Corp", code: "t1", count: 892, trend: 28.3, type: "tenant", parentCode: "ALPHA", parentName: "Grupo Alpha", coordinates: [-46.6333, -23.5505], countryCode: "BR" },
+  { name: "GlobalTech", code: "t3", count: 756, trend: 15.7, type: "tenant", parentCode: "ALPHA", parentName: "Grupo Alpha", coordinates: [-49.2733, -25.4284], countryCode: "BR" },
+  { name: "NextGen Solutions", code: "t5", count: 634, trend: 12.1, type: "tenant", parentCode: "BETA", parentName: "Grupo Beta Networks", coordinates: [-122.3321, 47.6062], countryCode: "US" },
+  { name: "TechStart", code: "t2", count: 523, trend: 8.4, type: "tenant", parentCode: "BETA", parentName: "Grupo Beta Networks", coordinates: [-97.7431, 30.2672], countryCode: "US" },
+  { name: "Apex Industries", code: "t6", count: 456, trend: 56.2, type: "tenant", isNew: true, parentCode: "DELTA", parentName: "Grupo Delta Corp", coordinates: [139.6503, 35.6762], countryCode: "JP" },
+  { name: "Stellar Dynamics", code: "t8", count: 398, trend: 4.2, type: "tenant", parentCode: "GAMMA", parentName: "Grupo Gamma Holdings", coordinates: [13.405, 52.52], countryCode: "DE" },
+  { name: "InnovateCo", code: "t4", count: 345, trend: -1.8, type: "tenant", parentCode: "GAMMA", parentName: "Grupo Gamma Holdings", coordinates: [2.3522, 48.8566], countryCode: "FR" },
+  { name: "Quantum Labs", code: "t7", count: 287, trend: 18.9, type: "tenant", parentCode: "ALPHA", parentName: "Grupo Alpha", coordinates: [-38.5014, -12.9714], countryCode: "BR" },
+];
+
+// Workspace rankings
+export const mockWorkspaceRankings: TelemetryRanking[] = [
+  { name: "production", code: "prod", count: 4521, trend: 14.2, type: "workspace" },
+  { name: "staging", code: "stg", count: 1234, trend: 8.7, type: "workspace" },
+  { name: "development", code: "dev", count: 756, trend: 22.3, type: "workspace" },
+  { name: "sandbox", code: "sbx", count: 234, trend: 45.1, type: "workspace", isNew: true },
+];
+
+// Environment rankings
+export const mockEnvironmentRankings: TelemetryRanking[] = [
+  { name: "cloud-br", code: "cloud-br", count: 2341, trend: 18.5, type: "environment" },
+  { name: "cloud-us", code: "cloud-us", count: 1892, trend: 12.3, type: "environment" },
+  { name: "cloud-eu", code: "cloud-eu", count: 1234, trend: 5.7, type: "environment" },
+  { name: "on-premise", code: "on-prem", count: 456, trend: -2.1, type: "environment" },
+  { name: "hybrid", code: "hybrid", count: 234, trend: 34.2, type: "environment", isNew: true },
 ];
 
 // Continent aggregations

@@ -11,6 +11,7 @@ type TelemetryGeoRankingProps = {
   onItemClick?: (ranking: TelemetryRanking) => void;
   showTrend?: boolean;
   maxItems?: number;
+  activeCode?: string;
   className?: string;
 };
 
@@ -20,6 +21,7 @@ export function TelemetryGeoRanking({
   onItemClick,
   showTrend = true,
   maxItems = 5,
+  activeCode,
   className,
 }: TelemetryGeoRankingProps) {
   const displayRankings = rankings.slice(0, maxItems);
@@ -44,17 +46,28 @@ export function TelemetryGeoRanking({
         {displayRankings.map((ranking, index) => {
           const barWidth = (ranking.count / maxCount) * 100;
           const isPositive = ranking.trend >= 0;
+          const isActive = activeCode === ranking.code;
 
           return (
             <button
               key={ranking.code}
               type="button"
               onClick={() => onItemClick?.(ranking)}
-              className="group relative w-full overflow-hidden rounded-lg bg-muted/50 transition-colors hover:bg-muted"
+              className={cn(
+                "group relative w-full overflow-hidden rounded-lg transition-colors",
+                isActive
+                  ? "bg-telemetry-feed-item-selected ring-1 ring-primary/30"
+                  : "bg-telemetry-feed-item hover:bg-telemetry-feed-item-hover"
+              )}
             >
               {/* Background bar */}
               <div
-                className="absolute inset-y-0 left-0 bg-primary/10 transition-all group-hover:bg-primary/15"
+                className={cn(
+                  "absolute inset-y-0 left-0 transition-all",
+                  isActive
+                    ? "bg-telemetry-ranking-bar-hover"
+                    : "bg-telemetry-ranking-bar group-hover:bg-telemetry-ranking-bar-hover"
+                )}
                 style={{ width: `${barWidth}%` }}
               />
 

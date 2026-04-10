@@ -17,6 +17,29 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  /* Telemetry tokens */
+  --color-telemetry-map-bg: var(--telemetry-map-bg);
+  --color-telemetry-panel: var(--telemetry-panel);
+  --color-telemetry-panel-border: var(--telemetry-panel-border);
+  --color-telemetry-feed-bg: var(--telemetry-feed-bg);
+  --color-telemetry-feed-item: var(--telemetry-feed-item);
+  --color-telemetry-feed-item-hover: var(--telemetry-feed-item-hover);
+  --color-telemetry-feed-item-selected: var(--telemetry-feed-item-selected);
+  --color-telemetry-marker-primary: var(--telemetry-marker-primary);
+  --color-telemetry-marker-success: var(--telemetry-marker-success);
+  --color-telemetry-marker-warning: var(--telemetry-marker-warning);
+  --color-telemetry-marker-danger: var(--telemetry-marker-danger);
+  --color-telemetry-cluster-small: var(--telemetry-cluster-small);
+  --color-telemetry-cluster-medium: var(--telemetry-cluster-medium);
+  --color-telemetry-cluster-large: var(--telemetry-cluster-large);
+  --color-telemetry-popup-bg: var(--telemetry-popup-bg);
+  --color-telemetry-popup-border: var(--telemetry-popup-border);
+  --color-telemetry-overlay-bg: var(--telemetry-overlay-bg);
+  --color-telemetry-ranking-bar: var(--telemetry-ranking-bar);
+  --color-telemetry-ranking-bar-hover: var(--telemetry-ranking-bar-hover);
+  --color-telemetry-live-pulse: var(--telemetry-live-pulse);
+  --color-telemetry-trend-up: var(--telemetry-trend-up);
+  --color-telemetry-trend-down: var(--telemetry-trend-down);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -81,6 +104,30 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Telemetry Design Tokens */
+  --telemetry-map-bg: oklch(0.97 0 0);
+  --telemetry-panel: oklch(1 0 0);
+  --telemetry-panel-border: oklch(0.922 0 0);
+  --telemetry-feed-bg: oklch(0.985 0 0);
+  --telemetry-feed-item: oklch(1 0 0);
+  --telemetry-feed-item-hover: oklch(0.97 0 0);
+  --telemetry-feed-item-selected: oklch(0.95 0.02 250);
+  --telemetry-marker-primary: oklch(0.65 0.2 250);
+  --telemetry-marker-success: oklch(0.65 0.18 145);
+  --telemetry-marker-warning: oklch(0.75 0.18 80);
+  --telemetry-marker-danger: oklch(0.6 0.22 25);
+  --telemetry-cluster-small: oklch(0.65 0.18 145);
+  --telemetry-cluster-medium: oklch(0.75 0.18 80);
+  --telemetry-cluster-large: oklch(0.6 0.22 25);
+  --telemetry-popup-bg: oklch(1 0 0);
+  --telemetry-popup-border: oklch(0.922 0 0);
+  --telemetry-overlay-bg: oklch(1 0 0 / 90%);
+  --telemetry-ranking-bar: oklch(0.65 0.15 250 / 15%);
+  --telemetry-ranking-bar-hover: oklch(0.65 0.15 250 / 25%);
+  --telemetry-live-pulse: oklch(0.65 0.18 145);
+  --telemetry-trend-up: oklch(0.65 0.18 145);
+  --telemetry-trend-down: oklch(0.6 0.22 25);
 }
 
 .dark {
@@ -115,6 +162,30 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Telemetry Design Tokens - Dark */
+  --telemetry-map-bg: oklch(0.18 0 0);
+  --telemetry-panel: oklch(0.205 0 0);
+  --telemetry-panel-border: oklch(1 0 0 / 10%);
+  --telemetry-feed-bg: oklch(0.18 0 0);
+  --telemetry-feed-item: oklch(0.22 0 0);
+  --telemetry-feed-item-hover: oklch(0.26 0 0);
+  --telemetry-feed-item-selected: oklch(0.28 0.03 250);
+  --telemetry-marker-primary: oklch(0.7 0.18 250);
+  --telemetry-marker-success: oklch(0.7 0.16 145);
+  --telemetry-marker-warning: oklch(0.78 0.16 80);
+  --telemetry-marker-danger: oklch(0.65 0.2 25);
+  --telemetry-cluster-small: oklch(0.7 0.16 145);
+  --telemetry-cluster-medium: oklch(0.78 0.16 80);
+  --telemetry-cluster-large: oklch(0.65 0.2 25);
+  --telemetry-popup-bg: oklch(0.22 0 0);
+  --telemetry-popup-border: oklch(1 0 0 / 15%);
+  --telemetry-overlay-bg: oklch(0.145 0 0 / 90%);
+  --telemetry-ranking-bar: oklch(0.7 0.12 250 / 20%);
+  --telemetry-ranking-bar-hover: oklch(0.7 0.12 250 / 30%);
+  --telemetry-live-pulse: oklch(0.7 0.16 145);
+  --telemetry-trend-up: oklch(0.7 0.16 145);
+  --telemetry-trend-down: oklch(0.65 0.2 25);
 }
 
 @layer base {

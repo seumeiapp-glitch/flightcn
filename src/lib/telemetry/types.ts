@@ -43,7 +43,41 @@ export type TelemetryTenant = {
   name: string;
   workspace?: string;
   environment?: string;
+  groupId?: string;
+  groupName?: string;
 };
+
+// Matriz Group (holding/network level)
+export type TelemetryGroup = {
+  id: string;
+  name: string;
+  code: string;
+  country?: string;
+  countryCode?: string;
+};
+
+// Organization/Company within Matriz or Seumei
+export type TelemetryOrganization = {
+  id: string;
+  name: string;
+  code: string;
+  groupId?: string;
+  groupName?: string;
+  country?: string;
+  countryCode?: string;
+};
+
+// Ranking types for different entity levels
+export type RankingType = 
+  | "country" 
+  | "city" 
+  | "state"
+  | "continent"
+  | "group" 
+  | "organization" 
+  | "tenant" 
+  | "workspace" 
+  | "environment";
 
 export type TelemetryEvent = {
   id: string;
@@ -88,7 +122,12 @@ export type TelemetryFilters = {
   country?: string;
   state?: string;
   city?: string;
+  // Organization hierarchy filters
+  group?: string;
+  organization?: string;
   tenant?: string;
+  workspace?: string;
+  environment?: string;
   platform?: Platform;
   liveOnly: boolean;
   criticalOnly: boolean;
@@ -100,6 +139,54 @@ export type TelemetryRanking = {
   count: number;
   trend: number;
   isNew?: boolean;
+  // For org hierarchy
+  type?: RankingType;
+  parentCode?: string;
+  parentName?: string;
+  // Location reference for map focus
+  coordinates?: [number, number];
+  countryCode?: string;
+};
+
+// Props contract for reusable telemetry page
+export type TelemetryPageConfig = {
+  // Data sources
+  events: TelemetryEvent[];
+  summary: TelemetrySummary;
+  // Rankings by type
+  rankings: {
+    countries?: TelemetryRanking[];
+    cities?: TelemetryRanking[];
+    states?: TelemetryRanking[];
+    groups?: TelemetryRanking[];
+    organizations?: TelemetryRanking[];
+    tenants?: TelemetryRanking[];
+    workspaces?: TelemetryRanking[];
+    environments?: TelemetryRanking[];
+  };
+  // Feature flags
+  features?: {
+    showGroupRanking?: boolean;
+    showOrgRanking?: boolean;
+    showTenantRanking?: boolean;
+    showWorkspaceRanking?: boolean;
+    showEnvironmentRanking?: boolean;
+    enableRealtime?: boolean;
+    realtimeIntervalMs?: number;
+  };
+  // Callbacks
+  onEventSelect?: (event: TelemetryEvent) => void;
+  onFilterChange?: (filters: TelemetryFilters) => void;
+  onRankingClick?: (ranking: TelemetryRanking, type: RankingType) => void;
+  onExport?: (format: "csv" | "json") => void;
+  // Theme
+  mapProjection?: "globe" | "mercator";
+  customMarkerColors?: {
+    primary?: string;
+    success?: string;
+    warning?: string;
+    danger?: string;
+  };
 };
 
 // GeoJSON helpers for map integration

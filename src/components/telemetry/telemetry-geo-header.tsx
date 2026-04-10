@@ -28,15 +28,15 @@ function MetricCard({
       className={cn(
         "flex items-center gap-3 rounded-lg px-4 py-3 transition-colors",
         highlight
-          ? "bg-emerald-500/10 dark:bg-emerald-500/20"
-          : "bg-muted/50 hover:bg-muted"
+          ? "bg-telemetry-live-pulse/10"
+          : "bg-telemetry-feed-item hover:bg-telemetry-feed-item-hover"
       )}
     >
       <div
         className={cn(
           "flex h-9 w-9 items-center justify-center rounded-lg",
           highlight
-            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+            ? "bg-telemetry-live-pulse/20 text-telemetry-live-pulse"
             : "bg-background text-muted-foreground"
         )}
       >
@@ -52,7 +52,7 @@ function MetricCard({
             <span
               className={cn(
                 "text-xs font-medium",
-                trend >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"
+                trend >= 0 ? "text-telemetry-trend-up" : "text-telemetry-trend-down"
               )}
             >
               {formatTrend(trend)}
@@ -68,7 +68,7 @@ export function TelemetryGeoHeader({ summary, className }: TelemetryGeoHeaderPro
   return (
     <header
       className={cn(
-        "flex flex-col gap-4 border-b bg-background/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:px-6",
+        "flex flex-col gap-4 border-b border-telemetry-panel-border bg-telemetry-panel/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-telemetry-panel/60 lg:px-6",
         className
       )}
     >
@@ -86,10 +86,10 @@ export function TelemetryGeoHeader({ summary, className }: TelemetryGeoHeaderPro
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+          <div className="flex items-center gap-2 rounded-full bg-telemetry-live-pulse/10 px-3 py-1.5 text-sm font-medium text-telemetry-live-pulse">
             <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-telemetry-live-pulse opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-telemetry-live-pulse" />
             </span>
             {summary.liveNow} ao vivo
           </div>

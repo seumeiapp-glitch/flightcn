@@ -49,7 +49,7 @@ function FilterPill({
         "rounded-full px-3 py-1 text-xs font-medium transition-colors",
         isActive
           ? "bg-primary text-primary-foreground"
-          : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+          : "bg-telemetry-feed-item text-muted-foreground hover:bg-telemetry-feed-item-hover hover:text-foreground"
       )}
     >
       {label}
@@ -93,7 +93,7 @@ export function TelemetryGeoFilters({
   };
 
   return (
-    <div className={cn("space-y-4 border-b bg-muted/30 px-4 py-4", className)}>
+    <div className={cn("space-y-4 border-b border-telemetry-panel-border bg-telemetry-feed-bg px-4 py-4", className)}>
       {/* Filter header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
