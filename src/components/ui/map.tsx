@@ -1515,6 +1515,193 @@ function MapClusterLayer<
   return null;
 }
 
+// Predefined heatmap color presets with RGBA for easy customization
+export const HEATMAP_PRESETS = {
+  neutral: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(59, 130, 246, 0.4)"],  // blue
+    [0.4, "rgba(34, 197, 94, 0.6)"],   // green
+    [0.6, "rgba(250, 204, 21, 0.75)"], // yellow
+    [0.8, "rgba(249, 115, 22, 0.85)"], // orange
+    [1, "rgba(239, 68, 68, 0.95)"],    // red
+  ],
+  blue: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(191, 219, 254, 0.4)"],  // blue-100
+    [0.4, "rgba(147, 197, 253, 0.55)"], // blue-200
+    [0.6, "rgba(59, 130, 246, 0.7)"],   // blue-500
+    [0.8, "rgba(37, 99, 235, 0.85)"],   // blue-600
+    [1, "rgba(29, 78, 216, 0.95)"],     // blue-700
+  ],
+  green: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(187, 247, 208, 0.4)"],  // green-100
+    [0.4, "rgba(134, 239, 172, 0.55)"], // green-200
+    [0.6, "rgba(34, 197, 94, 0.7)"],    // green-500
+    [0.8, "rgba(22, 163, 74, 0.85)"],   // green-600
+    [1, "rgba(21, 128, 61, 0.95)"],     // green-700
+  ],
+  red: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(254, 202, 202, 0.4)"],  // red-100
+    [0.4, "rgba(252, 165, 165, 0.55)"], // red-200
+    [0.6, "rgba(239, 68, 68, 0.7)"],    // red-500
+    [0.8, "rgba(220, 38, 38, 0.85)"],   // red-600
+    [1, "rgba(185, 28, 28, 0.95)"],     // red-700
+  ],
+  orange: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(254, 215, 170, 0.4)"],  // orange-100
+    [0.4, "rgba(253, 186, 116, 0.55)"], // orange-200
+    [0.6, "rgba(249, 115, 22, 0.7)"],   // orange-500
+    [0.8, "rgba(234, 88, 12, 0.85)"],   // orange-600
+    [1, "rgba(194, 65, 12, 0.95)"],     // orange-700
+  ],
+  purple: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(233, 213, 255, 0.4)"],  // purple-100
+    [0.4, "rgba(216, 180, 254, 0.55)"], // purple-200
+    [0.6, "rgba(168, 85, 247, 0.7)"],   // purple-500
+    [0.8, "rgba(147, 51, 234, 0.85)"],  // purple-600
+    [1, "rgba(126, 34, 206, 0.95)"],    // purple-700
+  ],
+  brown: [
+    [0, "rgba(0, 0, 0, 0)"],
+    [0.2, "rgba(214, 211, 209, 0.4)"],  // stone-200
+    [0.4, "rgba(168, 162, 158, 0.55)"], // stone-400
+    [0.6, "rgba(120, 113, 108, 0.7)"],  // stone-500
+    [0.8, "rgba(87, 83, 78, 0.85)"],    // stone-600
+    [1, "rgba(68, 64, 60, 0.95)"],      // stone-700
+  ],
+} as const;
+
+export type HeatmapPreset = keyof typeof HEATMAP_PRESETS;
+
+type MapHeatmapLayerProps = {
+  /** GeoJSON FeatureCollection data with Point geometry */
+  data: GeoJSON.FeatureCollection<GeoJSON.Point>;
+  /** Property to use for weight (default uses uniform weight of 1) */
+  weightProperty?: string;
+  /** Heatmap intensity at zoom 0 (default: 1) */
+  intensity?: number;
+  /** Heatmap radius in pixels at zoom 0 (default: 20) */
+  radius?: number;
+  /** Opacity from 0 to 1 (default: 0.6) */
+  opacity?: number;
+  /** Color preset name OR custom gradient. Array of [stop, color] pairs (0-1 range) */
+  colorGradient?: Array<[number, string]> | HeatmapPreset;
+  /** Maximum zoom level for heatmap rendering (default: 14) */
+  maxZoom?: number;
+};
+
+/**
+ * Heatmap layer for visualizing density/intensity of point data.
+ * Uses a neutral color scale by default for clarity without filter context.
+ */
+function MapHeatmapLayer({
+  data,
+  weightProperty,
+  intensity = 1,
+  radius = 20,
+  opacity = 0.6,
+  colorGradient,
+  maxZoom = 14,
+}: MapHeatmapLayerProps) {
+  const { map, isLoaded } = useMap();
+  const id = useId();
+  const sourceId = `heatmap-source-${id}`;
+  const layerId = `heatmap-layer-${id}`;
+
+  // Resolve gradient: preset name or custom array
+  const gradient = useMemo(() => {
+    if (!colorGradient) return HEATMAP_PRESETS.neutral;
+    if (typeof colorGradient === "string") {
+      return HEATMAP_PRESETS[colorGradient] ?? HEATMAP_PRESETS.neutral;
+    }
+    return colorGradient;
+  }, [colorGradient]);
+
+  // Build the color expression from gradient
+  const colorExpr = useMemo(() => {
+    const expr: (string | number)[] = [
+      "interpolate",
+      ["linear"],
+      ["heatmap-density"],
+    ];
+    for (const [stop, color] of gradient) {
+      expr.push(stop, color);
+    }
+    return expr as MapLibreGL.ExpressionSpecification;
+  }, [gradient]);
+
+  // Create/recreate layer whenever map ready, gradient, or key paint props change
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+
+    // Cleanup previous layer/source if they exist
+    try {
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
+    } catch {
+      // ignore
+    }
+
+    // Add source
+    map.addSource(sourceId, { type: "geojson", data });
+
+    // Add heatmap layer
+    map.addLayer(
+      {
+        id: layerId,
+        type: "heatmap",
+        source: sourceId,
+        maxzoom: maxZoom,
+        paint: {
+          "heatmap-weight": weightProperty
+            ? ["interpolate", ["linear"], ["get", weightProperty], 0, 0, 10, 1]
+            : 1,
+          "heatmap-intensity": [
+            "interpolate", ["linear"], ["zoom"],
+            0, intensity,
+            maxZoom, intensity * 3,
+          ],
+          "heatmap-color": colorExpr,
+          "heatmap-radius": [
+            "interpolate", ["linear"], ["zoom"],
+            0, radius,
+            maxZoom, radius * 2,
+          ],
+          "heatmap-opacity": [
+            "interpolate", ["linear"], ["zoom"],
+            maxZoom - 1, opacity,
+            maxZoom, 0,
+          ],
+        },
+      },
+      // Insert before first symbol layer so labels stay on top
+      map.getStyle().layers?.find((l) => l.type === "symbol")?.id
+    );
+
+    return () => {
+      try {
+        if (map.getLayer(layerId)) map.removeLayer(layerId);
+        if (map.getSource(sourceId)) map.removeSource(sourceId);
+      } catch {
+        // ignore
+      }
+    };
+  }, [isLoaded, map, colorExpr, intensity, opacity, radius, maxZoom, weightProperty, layerId, sourceId]);
+
+  // Update source data without recreating the layer
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+    const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource | undefined;
+    if (source) source.setData(data);
+  }, [isLoaded, map, data, sourceId]);
+
+  return null;
+}
+
 export {
   Map,
   useMap,
@@ -1527,6 +1714,8 @@ export {
   MapControls,
   MapRoute,
   MapClusterLayer,
+  MapHeatmapLayer,
+  HEATMAP_PRESETS,
 };
 
-export type { MapRef, MapViewport };
+export type { MapRef, MapViewport, HeatmapPreset };

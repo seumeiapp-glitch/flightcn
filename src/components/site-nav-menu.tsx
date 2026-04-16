@@ -17,6 +17,7 @@ export const defaultSiteNavItems: SiteNavItem[] = [
   { label: "Documentation", href: "/docs" },
   { label: "Install Guide", href: "/docs/install" },
   { label: "Airports", href: "/airports" },
+  { label: "Telemetry", href: "/telemetry" },
 ];
 
 export function SiteNavMenu({
