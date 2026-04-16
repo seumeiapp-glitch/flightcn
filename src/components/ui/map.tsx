@@ -1621,24 +1621,33 @@ function MapHeatmapLayer({
     return colorGradient;
   }, [colorGradient]);
 
-  useEffect(() => {
-    if (!isLoaded || !map) return;
-
-    // Add source
-    map.addSource(sourceId, {
-      type: "geojson",
-      data,
-    });
-
-    // Build heatmap-color expression
-    const colorExpr: (string | number)[] = [
+  // Build the color expression from gradient
+  const colorExpr = useMemo(() => {
+    const expr: (string | number)[] = [
       "interpolate",
       ["linear"],
       ["heatmap-density"],
     ];
     for (const [stop, color] of gradient) {
-      colorExpr.push(stop, color);
+      expr.push(stop, color);
     }
+    return expr as MapLibreGL.ExpressionSpecification;
+  }, [gradient]);
+
+  // Create/recreate layer whenever map ready, gradient, or key paint props change
+  useEffect(() => {
+    if (!isLoaded || !map) return;
+
+    // Cleanup previous layer/source if they exist
+    try {
+      if (map.getLayer(layerId)) map.removeLayer(layerId);
+      if (map.getSource(sourceId)) map.removeSource(sourceId);
+    } catch {
+      // ignore
+    }
+
+    // Add source
+    map.addSource(sourceId, { type: "geojson", data });
 
     // Add heatmap layer
     map.addLayer(
@@ -1648,44 +1657,28 @@ function MapHeatmapLayer({
         source: sourceId,
         maxzoom: maxZoom,
         paint: {
-          // Increase weight with zoom
           "heatmap-weight": weightProperty
             ? ["interpolate", ["linear"], ["get", weightProperty], 0, 0, 10, 1]
             : 1,
-          // Increase intensity with zoom level
           "heatmap-intensity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            0,
-            intensity,
-            maxZoom,
-            intensity * 3,
+            "interpolate", ["linear"], ["zoom"],
+            0, intensity,
+            maxZoom, intensity * 3,
           ],
-          // Color ramp for heatmap
-          "heatmap-color": colorExpr as MapLibreGL.ExpressionSpecification,
-          // Radius increases with zoom
+          "heatmap-color": colorExpr,
           "heatmap-radius": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            0,
-            radius,
-            maxZoom,
-            radius * 2,
+            "interpolate", ["linear"], ["zoom"],
+            0, radius,
+            maxZoom, radius * 2,
           ],
           "heatmap-opacity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            maxZoom - 1,
-            opacity,
-            maxZoom,
-            0,
+            "interpolate", ["linear"], ["zoom"],
+            maxZoom - 1, opacity,
+            maxZoom, 0,
           ],
         },
       },
-      // Insert before first symbol layer (labels) to keep labels on top
+      // Insert before first symbol layer so labels stay on top
       map.getStyle().layers?.find((l) => l.type === "symbol")?.id
     );
 
@@ -1697,17 +1690,13 @@ function MapHeatmapLayer({
         // ignore
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, map]);
+  }, [isLoaded, map, colorExpr, intensity, opacity, radius, maxZoom, weightProperty, layerId, sourceId]);
 
-  // Update source data
+  // Update source data without recreating the layer
   useEffect(() => {
     if (!isLoaded || !map) return;
-
-    const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource;
-    if (source) {
-      source.setData(data);
-    }
+    const source = map.getSource(sourceId) as MapLibreGL.GeoJSONSource | undefined;
+    if (source) source.setData(data);
   }, [isLoaded, map, data, sourceId]);
 
   return null;

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type MapLibreGL from "maplibre-gl";
 import { Globe, Map as MapIcon, Layers, Moon, Sun, Download, Activity, Building2 } from "lucide-react";
-import { useTheme } from "next-themes";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
@@ -84,7 +83,10 @@ const COMPANY_LIST = [
 ];
 
 export function TelemetryGeoPage() {
-  const { theme, setTheme } = useTheme();
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== "undefined" &&
+    document.documentElement.classList.contains("dark")
+  );
   const mapRef = useRef<MapLibreGL.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -268,7 +270,12 @@ export function TelemetryGeoPage() {
   const handleToggleVizMode = useCallback(() => {
     setVizMode((prev) => (prev === "both" ? "points" : prev === "points" ? "heatmap" : "both"));
   }, []);
-  const handleToggleTheme = useCallback(() => setTheme(theme === "dark" ? "light" : "dark"), [theme, setTheme]);
+  const handleToggleTheme = useCallback(() => {
+    const root = document.documentElement;
+    const next = !root.classList.contains("dark");
+    root.classList.toggle("dark", next);
+    setIsDark(next);
+  }, []);
 
   // Export PDF function
   const handleExportPDF = useCallback(async () => {
@@ -458,9 +465,9 @@ export function TelemetryGeoPage() {
             type="button"
             onClick={handleToggleTheme}
             className="flex h-8 w-8 items-center justify-center rounded-md border border-telemetry-panel-border bg-background transition-colors hover:bg-muted"
-            title={theme === "dark" ? "Mudar para modo claro" : "Mudar para modo escuro"}
+            title={isDark ? "Mudar para modo claro" : "Mudar para modo escuro"}
           >
-            {theme === "dark" ? (
+            {isDark ? (
               <Sun className="h-4 w-4 text-yellow-500" />
             ) : (
               <Moon className="h-4 w-4 text-slate-600" />
